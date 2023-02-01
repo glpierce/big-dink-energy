@@ -31,4 +31,33 @@ async function run() {
     await browser.close();
 };
 
+/**
+ * Function to book the optimal time slot by clicking on the last enabled time slot element.
+ * @param {object} page The Puppeteer page object
+ */
+ async function bookOptimalTimeSlot(page) {
+    // Find all time slot elements
+    const timeSlotElements = await page.$$('[id^="pt1:dcTime:iTime"]');
+    
+    // Filter out the time slot elements that have the class "p_AFDisabled" in any of its child elements
+    const enabledTimeSlotElements = await Promise.all(timeSlotElements.map(async (element) => {
+      const hasDisabledClass = await page.evaluate((elem) => {
+        return Array.from(elem.getElementsByTagName('*')).some((child) => child.classList.contains('p_AFDisabled'));
+      }, element);
+      return hasDisabledClass ? null : element;
+    }));
+    
+    // Select the last enabled time slot element
+    const lastEnabledTimeSlotElement = enabledTimeSlotElements.filter(Boolean).pop();
+    
+    // Click on the last enabled time slot element, or log a message if no enabled time slot element was found
+    if (lastEnabledTimeSlotElement) {
+      console.log(await lastEnabledTimeSlotElement)
+    } else {
+      console.log('No enabled time slot element found');
+    }
+  }
+
 run();
+
+module.exports = bookOptimalTimeSlot;
