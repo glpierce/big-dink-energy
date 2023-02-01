@@ -1,3 +1,5 @@
+const dotenv = require('dotenv')
+dotenv.config()
 const puppeteer = require('puppeteer-extra')
 const {executablePath} = require('puppeteer')
 const RecaptchaPlugin = require('puppeteer-extra-plugin-recaptcha')
@@ -7,10 +9,6 @@ puppeteer.use(
     visualFeedback: true // colorize reCAPTCHAs (violet = detected, green = solved)
   })
 )
-const dotenv = require('dotenv')
-const { tsCallSignatureDeclaration } = require('@babel/types')
-dotenv.config()
-
 
 function getURL(url) {
     const baseURL = url.split("DateStr=")[0]
@@ -21,7 +19,7 @@ function getURL(url) {
 }
 
 async function run() {
-    puppeteer.launch({ headless: false, executablePath: executablePath(), args: ['--disable-dev-shm-usage'] }).then(async browser => {
+    puppeteer.launch({ headless: true, executablePath: executablePath(), args: ['--disable-dev-shm-usage'] }).then(async browser => {
         try { 
             const page = await browser.newPage();
             await page.goto("https://sfrecpark.org/1591/Reservable-Pickleball-Courts");
@@ -35,17 +33,11 @@ async function run() {
             await page.type('input.auth0-lock-input', process.env.USERNAME);
             await page.type('[name="password"]', process.env.PASSWORD);
             await page.click('button[name="submit"]')
-            //await new Promise(r => setTimeout(r, 10000));
-            await page.waitForSelector('iframe')
+            await new Promise(r => setTimeout(r, 10000));
             // captcha
-            //await page.solveRecaptchas()
-            // await new Promise(r => setTimeout(r, 2000));
-            //await page.screenshot({path: "captcha.png", fullPage: true});
-            const elementFound = await bookOptimalTimeSlot(page)
-            // if (elementFound) {
-            //     await new Promise(r => setTimeout(r, 3000));
-            //     await page.screenshot({path: "test.png", fullPage: true});
-            // }
+            await page.solveRecaptchas()
+            // book time slot
+            await bookOptimalTimeSlot(page)
         } catch (error) {
             console.log(error)
         } finally {
@@ -75,13 +67,15 @@ async function run() {
     
     // Click on the last enabled time slot element, or log a message if no enabled time slot element was found
     if (lastEnabledTimeSlotElement) {
-        lastEnabledTimeSlotElement.click()
-        lastEnabledTimeSlotElement.click()
-        // await new Promise(r => setTimeout(r, 3000));
-        // await page.screenshot({path: "complete.png", fullPage: true});
-        return true
+        await lastEnabledTimeSlotElement.click()
+        await new Promise(r => setTimeout(r, 1000));
+        const bookElement = await page.$('[id$=":bBook"]');
+        await bookElement.click()
+        await page.waitForSelector('span[id="pt1:r1:0:ot6"]')
+        console.log("Success")
+        await new Promise(r => setTimeout(r, 3000));
     } else {
-        return false
+        console.log("No available time slots")
     }
   }
 
